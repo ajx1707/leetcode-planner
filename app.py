@@ -199,12 +199,12 @@ def api_companies():
 def api_topics():
     return jsonify({'success': True, 'data': excel_manager.topics})
 
-@app.route('/api/telegram/test', methods=['POST'])
+@app.route('/api/telegram/test', methods=['GET', 'POST'])
 def api_telegram_test():
     res = telegram_service.test_ping()
     return jsonify(res)
 
-@app.route('/api/telegram/send-daily', methods=['POST'])
+@app.route('/api/telegram/send-daily', methods=['GET', 'POST'])
 def api_telegram_send_daily():
     res = telegram_service.dispatch_daily_practice()
     return jsonify(res)
@@ -258,9 +258,13 @@ def api_telegram_config():
 @app.route('/api/scheduler/trigger-morning', methods=['GET', 'POST'])
 def api_trigger_morning():
     try:
-        scheduled_morning_dispatch()
-        batch = excel_manager.get_daily_batch()
-        return jsonify({'success': True, 'count': len(batch)})
+        problems = excel_manager.get_daily_batch()
+        tg_res = telegram_service.dispatch_daily_practice(problems)
+        return jsonify({
+            'success': tg_res.get('success', False),
+            'count': len(problems),
+            'telegram': tg_res
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -268,7 +272,10 @@ def api_trigger_morning():
 def api_trigger_evening():
     try:
         res = telegram_service.dispatch_evening_reminder()
-        return jsonify(res)
+        return jsonify({
+            'success': res.get('success', False),
+            'telegram': res
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

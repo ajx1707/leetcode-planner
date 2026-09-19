@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import html
 import threading
 import requests
 from dotenv import load_dotenv
@@ -67,24 +68,25 @@ class TelegramService:
         if not problems:
             return {"success": False, "error": "No problems scheduled for today."}
 
-        today_str = self.excel_manager.get_daily_batch()[0].get('topic', 'General') if problems else ''
-        header = f"🎯 <b>LEETCODE DAILY PRACTICE</b>\n<i>Topic: {problems[0].get('topic', 'General')}</i>\n"
+        active_topic = html.escape(str(problems[0].get('topic', 'General'))) if problems else 'General'
+        header = f"🎯 <b>LEETCODE DAILY PRACTICE</b>\n<i>Topic: {active_topic}</i>\n"
         
         body_lines = []
         inline_keyboard = []
 
         for idx, p in enumerate(problems, 1):
-            qid = p['question_id']
-            title = p['title']
-            diff = p['difficulty']
+            qid = html.escape(str(p['question_id']))
+            title = html.escape(str(p['title']))
+            diff = html.escape(str(p['difficulty']))
             url = p['url']
             is_done = p.get('is_completed_today', False)
             status_symbol = "✅" if is_done else "⏳"
+            status_text = html.escape(str(p.get('status', 'Unsolved')))
 
             body_lines.append(
                 f"\n<b>{idx}. #{qid} — {title}</b>\n"
                 f"   • Difficulty: <b>{diff}</b>\n"
-                f"   • Status: {status_symbol} <i>{p.get('status', 'Unsolved')}</i>\n"
+                f"   • Status: {status_symbol} <i>{status_text}</i>\n"
                 f"   • Solve: <a href=\"{url}\">Open on LeetCode ↗</a>"
             )
 
@@ -102,7 +104,9 @@ class TelegramService:
         full_text = header + "".join(body_lines) + footer
 
         reply_markup = {"inline_keyboard": inline_keyboard} if inline_keyboard else None
-        return self.send_message(full_text, reply_markup=reply_markup)
+        res = self.send_message(full_text, reply_markup=reply_markup)
+        print(f"[TelegramService] dispatch_daily_practice result: {res}")
+        return res
 
     def dispatch_evening_reminder(self):
         """Sends an evening reminder if problems remain unfinished."""
@@ -120,9 +124,9 @@ class TelegramService:
         inline_keyboard = []
 
         for p in pending:
-            qid = p['question_id']
-            title = p['title']
-            diff = p['difficulty']
+            qid = html.escape(str(p['question_id']))
+            title = html.escape(str(p['title']))
+            diff = html.escape(str(p['difficulty']))
             url = p['url']
 
             body_lines.append(
@@ -140,6 +144,7 @@ class TelegramService:
 
         reply_markup = {"inline_keyboard": inline_keyboard}
         res = self.send_message(full_text, reply_markup=reply_markup)
+        print(f"[TelegramService] dispatch_evening_reminder result: {res}")
         res["pending_count"] = len(pending)
         return res
 
