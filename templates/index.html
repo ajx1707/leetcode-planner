@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeetCode Scheduler & Daily Practice Planner</title>
+  <meta name="description" content="Deliberate practice scheduler and tracker for LeetCode with automated Telegram dispatch at 9:00 AM IST and evening check-ins at 7:00 PM IST." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css?v=14" />
+</head>
+<body class="mono-theme">
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-title">LEETCODE PLANNER</span>
+        <span class="brand-divider">/</span>
+        <span class="brand-sub">Daily 9 AM / 7 PM IST</span>
+      </div>
+
+      <nav class="nav-menu" role="tablist">
+        <button class="nav-item active" data-tab="analytics" id="tabAnalytics">Analytics</button>
+        <button class="nav-item" data-tab="daily" id="tabDaily">
+          Today's Practice
+          <span class="nav-count" id="dailyBadge">0</span>
+        </button>
+        <button class="nav-item" data-tab="explorer" id="tabExplorer">Problem Explorer</button>
+        <button class="nav-item" data-tab="settings" id="tabSettings">Settings</button>
+      </nav>
+
+      <div class="header-controls">
+        <button class="btn btn-primary" id="btnOpenLogModal">+ Log Problem</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+    <!-- TAB 1: ANALYTICS -->
+    <section class="tab-pane active" id="pane-analytics">
+      <!-- Top Metrics Row -->
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="metric-label">Total Solved</div>
+          <div class="metric-number-wrap">
+            <span class="metric-number" id="statTotalSolved">0</span>
+            <span class="metric-total" id="statMasterTotal">/ 0</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="statProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="metric-meta" id="statCompletionRate">0.0% completion rate</div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-label">Quality Breakdown</div>
+          <div class="metric-stats-trio">
+            <div class="trio-item">
+              <span class="trio-val" id="statIndepSolved">0</span>
+              <span class="trio-lbl">Independent</span>
+            </div>
+            <div class="trio-item">
+              <span class="trio-val" id="statHintSolved">0</span>
+              <span class="trio-lbl">With Hint</span>
+            </div>
+            <div class="trio-item">
+              <span class="trio-val" id="statReviewSolved">0</span>
+              <span class="trio-lbl">Reviewed</span>
+            </div>
+          </div>
+          <div class="metric-meta">Deliberate retention metric</div>
+        </div>
+
+        <div class="metric-box" id="cardReviewsDue">
+          <div class="metric-label">Due for Review</div>
+          <div class="metric-number-wrap">
+            <span class="metric-number" id="statReviewsDue">0</span>
+            <span class="metric-unit">problems</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="statReviewProgress" style="width: 100%"></div>
+          </div>
+          <div class="metric-meta">Attempted but incomplete</div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-label">Schedule Cadence</div>
+          <div class="metric-number-wrap">
+            <span class="metric-number" style="font-size: 1.15rem; font-family: var(--font-mono);">9 AM / 7 PM</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" style="width: 100%"></div>
+          </div>
+          <div class="metric-meta">Indian Standard Time (IST)</div>
+        </div>
+      </div>
+
+      <!-- Main Two Column Grid -->
+      <div class="dashboard-grid">
+        <!-- Topic Mastery Section -->
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Topic Coverage</h2>
+              <p class="panel-desc">Completion distribution across algorithmic patterns</p>
+            </div>
+            <span class="tag" id="topicCountBadge">Topics</span>
+          </div>
+          <div class="topics-grid" id="topicsContainer">
+            <div class="loading-state">Loading topics...</div>
+          </div>
+        </div>
+
+        <!-- Sidebar Section: Difficulty & Schedule Rules -->
+        <div class="sidebar-col">
+          <!-- Difficulty Panel -->
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Difficulty</h2>
+            </div>
+            <div class="diff-list">
+              <div class="diff-row">
+                <div class="diff-info">
+                  <span class="mono-badge">EASY</span>
+                  <span class="diff-val" id="diffEasyCounts">0 / 0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-bar" id="diffEasyFill" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div class="diff-row">
+                <div class="diff-info">
+                  <span class="mono-badge">MEDIUM</span>
+                  <span class="diff-val" id="diffMedCounts">0 / 0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-bar" id="diffMedFill" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div class="diff-row">
+                <div class="diff-info">
+                  <span class="mono-badge">HARD</span>
+                  <span class="diff-val" id="diffHardCounts">0 / 0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-bar" id="diffHardFill" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Rule Policy Panel -->
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Daily Dispatch Logic</h2>
+            </div>
+            <p class="panel-desc">Automatic calibration based on difficulty:</p>
+            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div class="kv-row">
+                <span class="kv-key"><span class="mono-badge">EASY</span></span>
+                <span class="kv-val">2 problems / day</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-key"><span class="mono-badge">MEDIUM</span></span>
+                <span class="kv-val">1 problem / day</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-key"><span class="mono-badge">HARD</span></span>
+                <span class="kv-val">1 problem / day</span>
+              </div>
+            </div>
+            <p class="settings-hint" style="margin-top: 10px;">
+              Dispatched at <b>9:00 AM IST</b>. Reminder at <b>7:00 PM IST</b>. Progress synchronizes in real time between Telegram and this dashboard.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: TODAY'S PRACTICE -->
+    <section class="tab-pane" id="pane-daily">
+      <div class="section-hero">
+        <div>
+          <h2 class="section-title">Today's Practice Assignment</h2>
+          <p class="section-desc">Topic-calibrated problems for today (2 if Easy, 1 if Medium or Hard).</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-secondary btn-sm" id="btnTelegramSendDaily">Send to Telegram</button>
+          <button class="btn btn-secondary btn-sm" id="btnRefreshDaily">Regenerate Batch</button>
+        </div>
+      </div>
+
+      <!-- Company Filter -->
+      <div class="filter-strip">
+        <span class="filter-caption">Company Filter:</span>
+        <div class="filter-buttons" id="dailyCompanyPills">
+          <button class="filter-btn active" data-company="">All</button>
+          <button class="filter-btn" data-company="amazon">Amazon</button>
+          <button class="filter-btn" data-company="google">Google</button>
+          <button class="filter-btn" data-company="meta">Meta</button>
+          <button class="filter-btn" data-company="microsoft">Microsoft</button>
+          <button class="filter-btn" data-company="apple">Apple</button>
+          <button class="filter-btn" data-company="uber">Uber</button>
+        </div>
+      </div>
+
+      <!-- Daily Problem Cards -->
+      <div class="daily-grid" id="dailyCardsContainer">
+        <div class="loading-state">Loading today's practice...</div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PROBLEM EXPLORER -->
+    <section class="tab-pane" id="pane-explorer">
+      <div class="panel explorer-controls">
+        <!-- Full Width Search Bar at Top -->
+        <div class="search-wrap-full" style="position: relative; width: 100%; margin-bottom: 1.25rem;">
+          <div class="search-icon-box" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none; color: var(--text-muted); z-index: 2;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <input type="text" id="inputSearch" class="form-control search-input-styled" style="padding-left: 44px !important;" placeholder="Search by problem title or #ID (e.g. 1, 53, Two Sum)..." />
+        </div>
+
+        <!-- 2 Dropdowns Left & 2 Dropdowns Right -->
+        <div class="filters-grid">
+          <!-- Left Side (2 Dropdowns) -->
+          <div class="filter-col">
+            <div class="filter-field">
+              <label class="filter-label" for="selectTopic">Topic Pattern</label>
+              <select id="selectTopic" class="form-control form-select">
+                <option value="all">All Topics</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-label" for="selectDifficulty">Difficulty</label>
+              <select id="selectDifficulty" class="form-control form-select">
+                <option value="all">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Right Side (2 Dropdowns) -->
+          <div class="filter-col">
+            <div class="filter-field">
+              <label class="filter-label" for="selectCompany">Target Company</label>
+              <select id="selectCompany" class="form-control form-select">
+                <option value="all">All Companies</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-label" for="selectStatus">Progress Status</label>
+              <select id="selectStatus" class="form-control form-select">
+                <option value="all">All Status</option>
+                <option value="unsolved">Unsolved</option>
+                <option value="solved">Solved</option>
+                <option value="attempted">Attempted</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Panel -->
+      <div class="panel table-panel">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;">ID</th>
+                <th>TITLE</th>
+                <th style="width: 110px;">DIFFICULTY</th>
+                <th style="width: 150px;">TOPIC</th>
+                <th>COMPANIES</th>
+                <th style="width: 120px;">STATUS</th>
+                <th style="width: 160px; text-align: right;">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="problemsTableBody">
+              <tr><td colspan="7" class="loading-state">Loading catalog...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <span class="footer-info" id="paginationInfo">Showing 0 problems</span>
+          <div class="pagination">
+            <button class="btn btn-secondary btn-sm" id="btnPrevPage" disabled>Previous</button>
+            <span class="page-num" id="pageIndicator">Page 1 / 1</span>
+            <button class="btn btn-secondary btn-sm" id="btnNextPage">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SETTINGS -->
+    <section class="tab-pane" id="pane-settings">
+      <div class="settings-layout">
+        <!-- Telegram Bot Settings Panel (Secure - Env Only) -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Telegram Notifications</h2>
+            <span class="tag" id="badgeTelegramStatus">CHECKING</span>
+          </div>
+          <p class="panel-desc">Dispatches daily 9:00 AM practice batches and 7:00 PM evening check-ins.</p>
+
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div class="kv-row">
+              <span class="kv-key">Bot Service</span>
+              <span class="kv-val" id="textTelegramReady">Checking...</span>
+            </div>
+            <div class="kv-row">
+              <span class="kv-key">Bot Token</span>
+              <span class="kv-val mono" style="color: var(--text-muted);">•••••••••••••••• (Set via TELEGRAM_BOT_TOKEN)</span>
+            </div>
+            <div class="kv-row">
+              <span class="kv-key">Chat ID</span>
+              <span class="kv-val mono" style="color: var(--text-muted);">•••••••••••• (Set via TELEGRAM_CHAT_ID)</span>
+            </div>
+          </div>
+
+          <p class="settings-hint" style="margin-top: 12px;">
+            Credentials are loaded securely from server environment variables (<code>.env</code> locally or Cloud Config in production). Never exposed to visitors.
+          </p>
+
+          <div class="settings-actions" style="margin-top: 14px;">
+            <button class="btn btn-primary btn-sm" id="btnTestTelegram">Test Ping</button>
+            <button class="btn btn-secondary btn-sm" id="btnSendPracticeTelegram">Dispatch Practice Now</button>
+          </div>
+          <div id="telegramFeedback" class="action-feedback"></div>
+        </div>
+
+        <!-- Automated Schedule Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Automated Schedule & Bot</h2>
+            <span class="tag" id="badgeSchedulerStatus">ACTIVE</span>
+          </div>
+          <p class="panel-desc">Automatic morning problem dispatch and evening completion checks.</p>
+          <div class="kv-row">
+            <span class="kv-key">Morning Dispatch</span>
+            <span class="kv-val mono">9:00 AM IST (2 Easy or 1 Med / Hard)</span>
+          </div>
+          <div class="kv-row">
+            <span class="kv-key">Evening Reminder</span>
+            <span class="kv-val mono">7:00 PM IST (Nudges if unfinished)</span>
+          </div>
+          <div class="kv-row">
+            <span class="kv-key">Two-Way Sync</span>
+            <span class="kv-val">Inline buttons in Telegram sync to Excel & Web</span>
+          </div>
+          <div class="settings-actions">
+            <button class="btn btn-secondary btn-sm" id="btnTriggerMorning">Trigger 9:00 AM Dispatch Now</button>
+            <button class="btn btn-secondary btn-sm" id="btnTriggerEvening">Trigger 7:00 PM Reminder Now</button>
+          </div>
+          <div id="schedulerFeedback" class="action-feedback"></div>
+        </div>
+
+        <!-- Excel Data Storage Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Excel Data Storage</h2>
+            <span class="tag">EXCEL</span>
+          </div>
+          <div class="kv-row">
+            <span class="kv-key">Master Bank</span>
+            <span class="kv-val mono">leetcode.xlsx (Read-Only)</span>
+          </div>
+          <div class="kv-row">
+            <span class="kv-key">User Tracker</span>
+            <span class="kv-val mono">leetcode_tracker.xlsx (Upsert)</span>
+          </div>
+          <p class="settings-hint">
+            All progress, attempt dates, review schedules, and dispatch records are saved strictly inside <code>leetcode_tracker.xlsx</code>.
+          </p>
+          <div class="settings-actions" style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/api/tracker/download" class="btn btn-secondary btn-sm" download>
+              ⬇ Download Tracker (.xlsx)
+            </a>
+            <button class="btn btn-secondary btn-sm" id="btnResetProgress" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+              Reset All Progress to 0
+            </button>
+          </div>
+          <div id="resetFeedback" class="action-feedback"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- LOG PROGRESS MODAL -->
+  <div class="modal-backdrop" id="logModal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-heading">Log Problem Progress</h3>
+          <p class="modal-subheading" id="modalProblemSubtitle">Update practice record in leetcode_tracker.xlsx</p>
+        </div>
+        <button class="btn-close" id="btnCloseLogModal">&times;</button>
+      </div>
+
+      <form id="formLogProgress" class="modal-content-form">
+        <input type="hidden" id="logQuestionId" />
+
+        <div class="field">
+          <label for="logProblemSearch">Problem</label>
+          <input type="text" id="logProblemSearch" class="form-control" placeholder="Search by ID or Title (e.g. 1 or Two Sum)" required />
+          <div class="field-feedback" id="logProblemDetails"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field flex-1">
+            <label for="logStatus">Status</label>
+            <select id="logStatus" class="form-control form-select">
+              <option value="Solved Independently">Solved Independently</option>
+              <option value="Solved with hint">Solved with hint</option>
+              <option value="Solved after seeing solution">Solved after seeing solution</option>
+              <option value="Attempted">Attempted (Struggled)</option>
+              <option value="Review solved">Review solved</option>
+            </select>
+          </div>
+          <div class="field flex-1">
+            <label for="logDate">Date</label>
+            <input type="date" id="logDate" class="form-control" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field flex-1">
+            <label for="logTimeSpent">Time Taken (Minutes)</label>
+            <input type="number" id="logTimeSpent" class="form-control" min="1" max="180" placeholder="25" />
+          </div>
+          <div class="field flex-1">
+            <label for="logHintsUsed">Hints Count</label>
+            <input type="number" id="logHintsUsed" class="form-control" min="0" max="10" value="0" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="logFeedback">Notes / Approach / Remarks</label>
+          <textarea id="logFeedback" class="form-control" rows="3" placeholder="Key insights, edge cases, or complexity notes..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btnCancelLogModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitLog">Save to Tracker</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-box" id="appToast" aria-live="polite"></div>
+
+  <script src="/static/js/app.js?v=11"></script>
+</body>
+</html>

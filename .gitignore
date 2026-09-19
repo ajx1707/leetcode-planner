@@ -1,0 +1,25 @@
+# Environment and Secrets
+.env
+.env.local
+
+# Python Bytecode and Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+ENV/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Testing scratch scripts
+test_api.py
+test_system.py
+inspect_excel.py
+debug_excel.py
