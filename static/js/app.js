@@ -3,6 +3,16 @@
  * Clean monochrome architecture, real-time sync with Flask API & Excel tracker.
  */
 
+// Auto-redirect to login if session expires (401)
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  if (response.status === 401) {
+    window.location.href = '/login';
+  }
+  return response;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // Global State
   const state = {

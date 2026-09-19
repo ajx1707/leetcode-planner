@@ -1,6 +1,7 @@
 import os
+from datetime import timedelta
 import pytz
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -12,6 +13,55 @@ load_dotenv()
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'leetcode-planner-secret-key-2026-safe')
+app.permanent_session_lifetime = timedelta(days=30)
+APP_PASSWORD = os.getenv('APP_PASSWORD', 'ajith2026').strip()
+
+@app.before_request
+def require_login():
+    # If no password configured, allow access
+    if not APP_PASSWORD:
+        return None
+
+    # Allow static assets
+    if request.path.startswith('/static/'):
+        return None
+
+    # Allow login and logout routes
+    if request.path in ('/login', '/logout'):
+        return None
+
+    # Allow automated external webhook triggers (e.g. Cron-job.org)
+    if request.path.startswith('/api/scheduler/'):
+        return None
+
+    # Check session
+    if not session.get('logged_in'):
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': 'Authentication required. Please log in.'}), 401
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if not APP_PASSWORD or session.get('logged_in'):
+        return redirect(url_for('index'))
+
+    error = None
+    if request.method == 'POST':
+        entered_pw = request.form.get('password', '').strip()
+        if entered_pw == APP_PASSWORD:
+            session['logged_in'] = True
+            session.permanent = True
+            return redirect(url_for('index'))
+        else:
+            error = "Invalid passcode. Please try again."
+
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
 
 # Initialize Managers
 excel_manager = ExcelManager(
