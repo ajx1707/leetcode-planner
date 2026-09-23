@@ -31,8 +31,8 @@ def require_login():
     if request.path in ('/login', '/logout'):
         return None
 
-    # Allow automated external webhook triggers (e.g. Cron-job.org)
-    if request.path.startswith('/api/scheduler/'):
+    # Allow automated external webhook triggers and keep-alive pings (e.g. Cron-job.org)
+    if request.path in ('/api/ping', '/api/status') or request.path.startswith('/api/scheduler/'):
         return None
 
     # Check session
@@ -305,6 +305,10 @@ def api_telegram_config():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/ping', methods=['GET'])
+def api_ping():
+    return jsonify({'status': 'ok'}), 200
+
 @app.route('/api/scheduler/trigger-morning', methods=['GET', 'POST'])
 def api_trigger_morning():
     try:
@@ -313,7 +317,7 @@ def api_trigger_morning():
         return jsonify({
             'success': tg_res.get('success', False),
             'count': len(problems),
-            'telegram': tg_res
+            'message': 'Morning practice dispatched' if tg_res.get('success') else tg_res.get('error', 'Failed')
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -324,7 +328,8 @@ def api_trigger_evening():
         res = telegram_service.dispatch_evening_reminder()
         return jsonify({
             'success': res.get('success', False),
-            'telegram': res
+            'pending_count': res.get('pending_count', 0),
+            'message': res.get('message', 'Evening reminder check finished')
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
