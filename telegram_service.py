@@ -6,6 +6,8 @@ import threading
 import requests
 from dotenv import load_dotenv
 
+from excel_manager import get_ist_today_str
+
 load_dotenv()
 
 class TelegramService:
@@ -16,6 +18,27 @@ class TelegramService:
         self.is_running = False
         self.poll_thread = None
         self.last_update_id = 0
+        self.state_file = os.path.join(os.path.dirname(__file__), '.dispatch_state.json')
+        self._load_dispatch_state()
+
+    def _load_dispatch_state(self):
+        self.dispatch_state = {
+            'morning_date': None,
+            'evening_date': None
+        }
+        if os.path.exists(self.state_file):
+            try:
+                with open(self.state_file, 'r', encoding='utf-8') as f:
+                    self.dispatch_state.update(json.load(f))
+            except Exception as e:
+                print(f"[TelegramService] Error loading dispatch state: {e}")
+
+    def _save_dispatch_state(self):
+        try:
+            with open(self.state_file, 'w', encoding='utf-8') as f:
+                json.dump(self.dispatch_state, f, indent=2)
+        except Exception as e:
+            print(f"[TelegramService] Error saving dispatch state: {e}")
 
     def update_credentials(self, bot_token=None, chat_id=None):
         if bot_token:
@@ -60,8 +83,15 @@ class TelegramService:
         )
         return self.send_message(msg)
 
-    def dispatch_daily_practice(self, problems=None):
+    def dispatch_daily_practice(self, problems=None, force=False):
         """Sends today's scheduled practice problems with inline action buttons."""
+        today_str = get_ist_today_str()
+
+        # Deduplication: prevent duplicate sends within the same calendar day unless explicitly forced
+        if not force and self.dispatch_state.get('morning_date') == today_str:
+            print(f"[TelegramService] Morning practice already dispatched for {today_str}. Skipping duplicate.")
+            return {"success": True, "message": "Already dispatched for today", "duplicate": True}
+
         if not problems:
             problems = self.excel_manager.get_daily_batch()
 
@@ -106,10 +136,20 @@ class TelegramService:
         reply_markup = {"inline_keyboard": inline_keyboard} if inline_keyboard else None
         res = self.send_message(full_text, reply_markup=reply_markup)
         print(f"[TelegramService] dispatch_daily_practice result: {res}")
+        if res.get("success"):
+            self.dispatch_state['morning_date'] = today_str
+            self._save_dispatch_state()
         return res
 
-    def dispatch_evening_reminder(self):
-        """Sends an evening reminder if problems remain unfinished."""
+    def dispatch_evening_reminder(self, force=False):
+        """Sends a friendly reminder if problems remain unfinished from today's assignment."""
+        today_str = get_ist_today_str()
+
+        # Deduplication: prevent duplicate reminder sends within the same calendar day unless forced
+        if not force and self.dispatch_state.get('evening_date') == today_str:
+            print(f"[TelegramService] Evening reminder already sent for {today_str}. Skipping duplicate.")
+            return {"success": True, "message": "Already sent reminder today", "duplicate": True}
+
         problems = self.excel_manager.get_daily_batch()
         pending = [p for p in problems if not p.get('is_completed_today', False)]
 
@@ -117,8 +157,10 @@ class TelegramService:
             print("[TelegramService] Evening check: All daily problems are already solved!")
             return {"success": True, "message": "All solved, no reminder needed.", "pending_count": 0}
 
-        header = f"⏰ <b>LEETCODE EVENING REMINDER (7:00 PM IST)</b>\n"
-        header += f"You have <b>{len(pending)} problem(s)</b> remaining from today's assignment:\n"
+        header = (
+            f"🌙 <b>Hey buddy, you haven't completed your scheduled problems yet!</b>\n\n"
+            f"You still have <b>{len(pending)} problem(s)</b> left from today's assignment:\n"
+        )
 
         body_lines = []
         inline_keyboard = []
@@ -130,21 +172,23 @@ class TelegramService:
             url = p['url']
 
             body_lines.append(
-                f"\n• <b>#{qid}: {title}</b> ({diff})\n"
-                f"  Link: <a href=\"{url}\">Open LeetCode</a>"
+                f"• <b>#{qid}: {title}</b> (<i>{diff}</i>)\n"
             )
 
             inline_keyboard.append([
                 {"text": f"✅ Mark #{qid} Complete", "callback_data": f"done:{qid}"},
-                {"text": f"🔗 Problem #{qid}", "url": url}
+                {"text": f"⚡ Solve #{qid} ↗", "url": url}
             ])
 
-        footer = "\n\n💪 <i>Set aside 30 minutes tonight to keep your consistency streak alive!</i>"
+        footer = "\n💪 <i>Set aside 20–30 minutes tonight to keep your streak alive!</i>"
         full_text = header + "".join(body_lines) + footer
 
         reply_markup = {"inline_keyboard": inline_keyboard}
         res = self.send_message(full_text, reply_markup=reply_markup)
         print(f"[TelegramService] dispatch_evening_reminder result: {res}")
+        if res.get("success"):
+            self.dispatch_state['evening_date'] = today_str
+            self._save_dispatch_state()
         res["pending_count"] = len(pending)
         return res
 
@@ -266,7 +310,7 @@ class TelegramService:
                 self.send_message(welcome)
 
             elif text.startswith("/today"):
-                self.dispatch_daily_practice()
+                self.dispatch_daily_practice(force=True)
 
             elif text.startswith("/status"):
                 stats = self.excel_manager.get_stats()

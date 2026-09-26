@@ -86,7 +86,7 @@ def scheduled_morning_dispatch():
     print("[Scheduler] Running 9:00 AM IST Morning Practice Dispatch...")
     problems = excel_manager.get_daily_batch()
     if telegram_service.is_configured():
-        res = telegram_service.dispatch_daily_practice(problems)
+        res = telegram_service.dispatch_daily_practice(problems, force=False)
         print(f"[Scheduler] Dispatched morning practice: {res}")
     else:
         print("[Scheduler] Telegram not configured; practice batch prepared in tracker.")
@@ -94,7 +94,7 @@ def scheduled_morning_dispatch():
 def scheduled_evening_reminder():
     print("[Scheduler] Running 7:00 PM IST Evening Reminder Check...")
     if telegram_service.is_configured():
-        res = telegram_service.dispatch_evening_reminder()
+        res = telegram_service.dispatch_evening_reminder(force=False)
         print(f"[Scheduler] Evening reminder result: {res}")
 
 m_hour = int(os.getenv('MORNING_DISPATCH_HOUR', 9))
@@ -256,7 +256,7 @@ def api_telegram_test():
 
 @app.route('/api/telegram/send-daily', methods=['GET', 'POST'])
 def api_telegram_send_daily():
-    res = telegram_service.dispatch_daily_practice()
+    res = telegram_service.dispatch_daily_practice(force=True)
     return jsonify(res)
 
 @app.route('/api/telegram/config', methods=['POST'])
@@ -313,7 +313,7 @@ def api_ping():
 def api_trigger_morning():
     try:
         problems = excel_manager.get_daily_batch()
-        tg_res = telegram_service.dispatch_daily_practice(problems)
+        tg_res = telegram_service.dispatch_daily_practice(problems, force=False)
         return jsonify({
             'success': tg_res.get('success', False),
             'count': len(problems),
@@ -325,7 +325,7 @@ def api_trigger_morning():
 @app.route('/api/scheduler/trigger-evening', methods=['GET', 'POST'])
 def api_trigger_evening():
     try:
-        res = telegram_service.dispatch_evening_reminder()
+        res = telegram_service.dispatch_evening_reminder(force=False)
         return jsonify({
             'success': res.get('success', False),
             'pending_count': res.get('pending_count', 0),
